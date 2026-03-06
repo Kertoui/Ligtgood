@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8"/>
+    <title>Ligtgood - Jeu</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no"/>
+    <style>
+      body {
+        margin: 0;
+        background: #1a1a1a;
+        overflow: hidden;
+      }
+      canvas { display: block; }
+      .joystick-zone {
+        position: fixed;
+        bottom: 40px;
+        width: 120px;
+        height: 120px;
+        background: #ffffff22;
+        border: 2px solid #ffffff44;
+        border-radius: 50%;
+        touch-action: none;
+        z-index: 10;
+      }
+      .joystick-point {
+        position: absolute;
+        width: 50px;
+        height: 50px;
+        background: #ffffff88;
+        border-radius: 50%;
+        top: 35px;
+        left: 35px;
+      }
+      #joystick-gauche { left: 40px; }
+      #joystick-droit {
+        right: 40px;
+        border-color: #ff444488;
+        background: #ff444422;
+      }
+      #joystick-droit .joystick-point { background: #ff444488; }
+
+      #info-vague {
+        position: fixed;
+        top: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        color: white;
+        font-size: 1.2rem;
+        font-family: Arial, sans-serif;
+        font-weight: bold;
+        background: #00000088;
+        padding: 8px 20px;
+        border-radius: 20px;
+        z-index: 10;
+        letter-spacing: 2px;
+      }
+
+      #annonce-vague {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        color: #ffff00;
+        font-size: 2.5rem;
+        font-family: Arial, sans-serif;
+        font-weight: bold;
+        text-align: center;
+        z-index: 20;
+        display: none;
+        text-shadow: 0 0 20px #ff8800;
+      }
+
+      #btn-pause {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        width: 50px;
+        height: 50px;
+        background: #00000088;
+        border: 2px solid #ffffff44;
+        border-radius: 50%;
+        color: white;
+        font-size: 1.3rem;
+        z-index: 10;
+        touch-action: manipulation;
+      }
+
+      #menu-pause {
+        position: fixed;
+        top: 0; left: 0;
+        width: 100%; height: 100%;
+        background: #000000aa;
+        z-index: 30;
+        display: none;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 20px;
+      }
+
+      #menu-pause h2 {
+        color: white;
+        font-size: 2rem;
+        font-family: Arial, sans-serif;
+        letter-spacing: 4px;
+        margin-bottom: 10px;
+      }
+
+      .btn-pause-menu {
+        width: 220px;
+        padding: 16px;
+        border: none;
+        border-radius: 12px;
+        font-size: 1.1rem;
+        font-weight: bold;
+        letter-spacing: 2px;
+        cursor: pointer;
+        touch-action: manipulation;
+      }
+
+      #btn-reprendre { background: #4f46e5; color: white; }
+      #btn-retour-menu {
+        background: transparent;
+        color: #a78bfa;
+        border: 2px solid #a78bfa !important;
+      }
+
+      #barre-vie {
+        position: fixed;
+        bottom: 185px;
+        left: 20px;
+        z-index: 10;
+        font-family: Arial, sans-serif;
+        color: white;
+        font-size: 0.9rem;
+      }
+
+      #barre-vie-fond {
+        width: 150px;
+        height: 15px;
+        background: #ff000066;
+        border-radius: 10px;
+        margin-top: 4px;
+        overflow: hidden;
+      }
+
+      #barre-vie-remplie {
+        width: 100%;
+        height: 15px;
+        background: #00ff00;
+        border-radius: 10px;
+        transition: width 0.2s;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="joystick-gauche" class="joystick-zone">
+      <div class="joystick-point" id="point-gauche"></div>
+    </div>
+    <div id="joystick-droit" class="joystick-zone">
+      <div class="joystick-point" id="point-droit"></div>
+    </div>
+    <div id="info-vague">🧟 VAGUE 1</div>
+    <div id="annonce-vague"></div>
+    <button id="btn-pause">⏸</button>
+    <div id="barre-vie">
+      ❤️ VIE
+      <div id="barre-vie-fond">
+        <div id="barre-vie-remplie"></div>
+      </div>
+    </div>
+    <div id="menu-pause">
+      <h2>⏸ PAUSE</h2>
+      <button class="btn-pause-menu" id="btn-reprendre">▶ REPRENDRE</button>
+      <button class="btn-pause-menu" id="btn-retour-menu">🏠 RETOUR AU MENU</button>
+    </div>
+    <canvas id="jeu"></canvas>
+    <script>
+      var canvas = document.getElementById('jeu');
+      var ctx = canvas.getContext('2d');
+
+      function redimensionner() {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+      }
+      redimensionner();
+      window.addEventListener('resize', redimensionner);
+
+      var imgSoldat = new Image();
+      imgSoldat.src = 'removebg-preview.png';
+
+      var imgZombie = new Image();
+      imgZombie.src = '1-removebg-preview.png';
+
+      var sonZombie = new Audio('https://assets.mixkit.co/active_storage/sfx/2885/2885-preview.mp3');
+      sonZombie.volume = 0.4;
+
+      var enPause = false;
+
+      document.getElementById('btn-pause').addEventListener('touchend', function(e) {
+        e.preventDefault();
+        enPause = true;
+        document.getElementById('menu-pause').style.display = 'flex';
+      });
+
+      document.getElementById('btn-reprendre').addEventListener('touchend', function(e) {
+        e.preventDefault();
+        enPause = false;
+        document.getElementById('menu-pause').style.display = 'none';
+        mettreAJour();
+      });
+
+      document.getElementById('btn-retour-menu').addEventListener('touchend', function(e) {
+        e.preventDefault();
+        window.location.href = 'Menu.html';
+      });
+
+      var joueur = {
+        x: canvas.width / 2,
+        y: canvas.height / 1.3,
+        taille: 20,
+        vitesse: 3,
+        vie: 12,
+        vieMax: 12
+      };
+
+      var obstacles = [
+        {x: 50,  y: 150, w: 120, h: 20},
+        {x: 250, y: 100, w: 100, h: 20},
+        {x: 500, y: 80,  w: 150, h: 20},
+        {x: 700, y: 200, w: 120, h: 20},
+        {x: 100, y: 350, w: 150, h: 20},
+        {x: 400, y: 300, w: 120, h: 20},
+        {x: 600, y: 400, w: 100, h: 20},
+        {x: 500, y: 500, w: 100, h: 20},
+        {x: 200, y: 150, w: 20, h: 100},
+        {x: 450, y: 200, w: 20, h: 120},
+        {x: 650, y: 300, w: 20, h: 100},
+        {x: 300, y: 400, w: 20, h: 120},
+        {x: 750, y: 100, w: 20, h: 80},
+        {x: 350, y: 150, w: 50, h: 50},
+        {x: 150, y: 250, w: 50, h: 50},
+        {x: 550, y: 250, w: 50, h: 50},
+        {x: 700, y: 450, w: 50, h: 50},
+        {x: 100, y: 450, w: 50, h: 50},
+      ];
+
+      var vaguesConfig = [3, 5, 8, 12, 16, 20, 25, 30, 35, 40];
+      var vagueCourante = 0;
+      var zombiesRestantsASpawner = 0;
+      var vagueEnCours = false;
+      var balles = [];
+      var dernierTir = 0;
+      var ennemis = [];
+      var dernierSon = 0;
+      var dernierSpawn = 0;
+      var dernierDegat = 0;
+
+      var joystickG = { dx: 0, dy: 0 };
+      var joystickD = { dx: 0, dy: 0, actif: false };
+
+      function mettreAJourVie() {
+        var pct = (joueur.vie / joueur.vieMax) * 100;
+        document.getElementById('barre-vie-remplie').style.width = pct + '%';
+        if (pct > 50) {
+          document.getElementById('barre-vie-remplie').style.background = '#00ff00';
+        } else if (pct > 25) {
+          document.getElementById('barre-vie-remplie').style.background = '#ffaa00';
+        } else {
+          document.getElementById('barre-vie-remplie').style.background = '#ff0000';
+        }
+      }
+
+      function creerJoystick(zoneId, pointId, joystickObj, estDroit) {
+        var zone = document.getElementById(zoneId);
+        var point = document.getElementById(pointId);
+        var zoneRect = zone.getBoundingClientRect();
+
+        zone.addEventListener('touchstart', function(e) {
+          e.stopPropagation();
+          zoneRect = zone.getBoundingClientRect();
+          if (estDroit) joystickObj.actif = true;
+        }, { passive: true });
+
+        zone.addEventListener('touchmove', function(e) {
+          e.preventDefault();
+          var touch = e.touches[0];
+          var cx = zoneRect.left + zoneRect.width / 2;
+          var cy = zoneRect.top + zoneRect.height / 2;
+          var dx = touch.clientX - cx;
+          var dy = touch.clientY - cy;
+          var dist = Math.sqrt(dx*dx + dy*dy);
+          var max = 35;
+          if (dist > max) { dx = dx/dist*max; dy = dy/dist*max; }
+          joystickObj.dx = dx / max;
+          joystickObj.dy = dy / max;
+          point.style.left = (35 + dx) + 'px';
+          point.style.top = (35 + dy) + 'px';
+        }, { passive: false });
+
+        zone.addEventListener('touchend', function(e) {
+          e.stopPropagation();
+          joystickObj.dx = 0;
+          joystickObj.dy = 0;
+          if (estDroit) joystickObj.actif = false;
+          point.style.left = '35px';
+          point.style.top = '35px';
+        }, { passive: true });
+      }
+
+      creerJoystick('joystick-gauche', 'point-gauche', joystickG, false);
+      creerJoystick('joystick-droit', 'point-droit', joystickD, true);
+
+      function afficherAnnonceVague(num) {
+        var annonce = document.getElementById('annonce-vague');
+        annonce.textContent = '⚔️ VAGUE ' + num + ' !';
+        annonce.style.display = 'block';
+        setTimeout(function() { annonce.style.display = 'none'; }, 2000);
+      }
+
+      function demarrerVague() {
+        vagueCourante++;
+        var nbZombies = vagueCourante <= vaguesConfig.length
+          ? vaguesConfig[vagueCourante - 1]
+          : vaguesConfig[vaguesConfig.length - 1] + (vagueCourante - vaguesConfig.length) * 5;
+        zombiesRestantsASpawner = nbZombies;
+        vagueEnCours = true;
+        document.getElementById('info-vague').textContent = '🧟 VAGUE ' + vagueCourante;
+        afficherAnnonceVague(vagueCourante);
+      }
+
+      function spawnerUnZombie() {
+        if (zombiesRestantsASpawner <= 0) return;
+        var cote = Math.floor(Math.random() * 4);
+        var x, y;
+        if (cote === 0) { x = Math.random() * canvas.width; y = 0; }
+        else if (cote === 1) { x = canvas.width; y = Math.random() * canvas.height; }
+        else if (cote === 2) { x = Math.random() * canvas.width; y = canvas.height; }
+        else { x = 0; y = Math.random() * canvas.height; }
+        ennemis.push({ x: x, y: y, taille: 20, vitesse: 1.5, vie: 3 });
+        zombiesRestantsASpawner--;
+      }
+
+      demarrerVague();
+
+      function bloqueParObstacle(ex, ey, taille) {
+        for (var i = 0; i < obstacles.length; i++) {
+          var o = obstacles[i];
+          if (ex + taille > o.x && ex - taille < o.x + o.w &&
+              ey + taille > o.y && ey - taille < o.y + o.h) return true;
+        }
+        return false;
+      }
+
+      function dessiner() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        ctx.fillStyle = '#2d5a1b';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        ctx.fillStyle = '#8b7355';
+        obstacles.forEach(function(o) {
+          ctx.fillRect(o.x, o.y, o.w, o.h);
+        });
+
+        ennemis.forEach(function(e) {
+          ctx.drawImage(imgZombie, e.x - 20, e.y - 30, 40, 60);
+          ctx.fillStyle = '#ff0000';
+          ctx.fillRect(e.x - 20, e.y - 38, 40, 5);
+          ctx.fillStyle = '#00ff00';
+          ctx.fillRect(e.x - 20, e.y - 38, (e.vie / 3) * 40, 5);
+        });
+
+        ctx.fillStyle = '#ffff00';
+        balles.forEach(function(b) {
+          ctx.beginPath();
+          ctx.arc(b.x, b.y, 5, 0, Math.PI * 2);
+          ctx.fill();
+        });
+
+        ctx.drawImage(imgSoldat, joueur.x - 20, joueur.y - 30, 40, 60);
+      }
+
+      function mettreAJour() {
+        if (enPause) return;
+
+        var maintenant = Date.now();
+
+        if (zombiesRestantsASpawner > 0 && maintenant - dernierSpawn > 800) {
+          spawnerUnZombie();
+          dernierSpawn = maintenant;
+        }
+
+        if (vagueEnCours && zombiesRestantsASpawner === 0 && ennemis.length === 0) {
+          vagueEnCours = false;
+          setTimeout(function() { demarrerVague(); }, 3000);
+        }
+
+        var nouveauX = joueur.x + joystickG.dx * joueur.vitesse;
+        var nouveauY = joueur.y + joystickG.dy * joueur.vitesse;
+
+        nouveauX = Math.max(joueur.taille, Math.min(canvas.width - joueur.taille, nouveauX));
+        nouveauY = Math.max(joueur.taille, Math.min(canvas.height - joueur.taille, nouveauY));
+
+        var blocX = false;
+        var blocY = false;
+
+        obstacles.forEach(function(o) {
+          if (nouveauX + joueur.taille > o.x &&
+              nouveauX - joueur.taille < o.x + o.w &&
+              joueur.y + joueur.taille > o.y &&
+              joueur.y - joueur.taille < o.y + o.h) blocX = true;
+          if (joueur.x + joueur.taille > o.x &&
+              joueur.x - joueur.taille < o.x + o.w &&
+              nouveauY + joueur.taille > o.y &&
+              nouveauY - joueur.taille < o.y + o.h) blocY = true;
+        });
+
+        if (!blocX) joueur.x = nouveauX;
+        if (!blocY) joueur.y = nouveauY;
+
+        if (joystickD.actif && maintenant - dernierTir > 100) {
+          var dist = Math.sqrt(joystickD.dx*joystickD.dx + joystickD.dy*joystickD.dy);
+          if (dist > 0.1) {
+            balles.push({
+              x: joueur.x, y: joueur.y,
+              dx: joystickD.dx / dist,
+              dy: joystickD.dy / dist,
+              vitesse: 8
+            });
+            dernierTir = maintenant;
+          }
+        }
+
+        ennemis.forEach(function(e) {
+          var dx = joueur.x - e.x;
+          var dy = joueur.y - e.y;
+          var dist = Math.sqrt(dx*dx + dy*dy);
+          var nx = (dx / dist) * e.vitesse;
+          var ny = (dy / dist) * e.vitesse;
+          if (!bloqueParObstacle(e.x + nx, e.y, e.taille)) e.x += nx;
+          if (!bloqueParObstacle(e.x, e.y + ny, e.taille)) e.y += ny;
+
+          // Dégâts zombie sur joueur toutes les 500ms
+          if (dist < joueur.taille + e.taille && maintenant - dernierDegat > 500) {
+            joueur.vie -= 0.5;
+            dernierDegat = maintenant;
+            mettreAJourVie();
+            if (joueur.vie <= 0) {
+              alert('Game Over ! Vague atteinte : ' + vagueCourante);
+              window.location.href = 'Menu.html';
+            }
+          }
+        });
+
+        if (ennemis.length > 0 && maintenant - dernierSon > 3000) {
+          sonZombie.currentTime = 0;
+          sonZombie.play();
+          dernierSon = maintenant;
+        }
+
+        for (var i = balles.length - 1; i >= 0; i--) {
+          for (var j = ennemis.length - 1; j >= 0; j--) {
+            var dx = balles[i].x - ennemis[j].x;
+            var dy = balles[i].y - ennemis[j].y;
+            var dist = Math.sqrt(dx*dx + dy*dy);
+            if (dist < 25) {
+              ennemis[j].vie--;
+              balles.splice(i, 1);
+              break;
+            }
+          }
+        }
+
+        ennemis = ennemis.filter(function(e) { return e.vie > 0; });
+        balles.forEach(function(b) { b.x += b.dx * b.vitesse; b.y += b.dy * b.vitesse; });
+        balles = balles.filter(function(b) {
+          return b.x > 0 && b.x < canvas.width && b.y > 0 && b.y < canvas.height;
+        });
+
+        dessiner();
+        requestAnimationFrame(mettreAJour);
+      }
+
+      mettreAJour();
+    </script>
+  </body>
+</html>

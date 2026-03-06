@@ -1,0 +1,149 @@
+!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8"/>
+    <title>Ligtgood</title>
+    <style>
+      body {
+        margin: 0;
+        height: 100vh;
+        color: white;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        flex-direction: column;
+        overflow: hidden;
+      }
+
+      #fond {
+        position: fixed;
+        top: 0; left: 0;
+        width: 100%; height: 100%;
+        z-index: 0;
+        background-image: url('https://images.unsplash.com/photo-1448375240586-882707db888b?w=800');
+        background-size: cover;
+        background-position: center;
+        filter: brightness(0.8);
+      }
+
+      @keyframes foncer {
+        0%   { transform: scale(1); opacity: 1; }
+        80%  { transform: scale(8); opacity: 1; }
+        100% { transform: scale(8); opacity: 0; }
+      }
+
+      h1 {
+        font-size: 3rem;
+        letter-spacing: 5px;
+        position: relative;
+        z-index: 2;
+        animation: foncer 2s forwards;
+        animation-delay: 1.5s;
+      }
+
+      #perso {
+        display: none;
+        height: 350px;
+        position: relative;
+        z-index: 2;
+      }
+
+#boutons {
+  position: fixed;
+  bottom: 30px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  z-index: 2;
+}
+
+      #btn-jouer {
+        background: #4f46e5;
+        color: white;
+        border: none;
+        padding: 15px 30px;
+        font-size: 1.2rem;
+        border-radius: 10px;
+        letter-spacing: 2px;
+        position: relative;
+        overflow: hidden;
+        transition: box-shadow 0.3s;
+      }
+
+      #btn-jouer:active {
+        box-shadow: 0 0 20px #818cf8, 0 0 40px #818cf8;
+      }
+
+      #btn-jouer::before {
+        content: '';
+        position: absolute;
+        top: 0; left: -100%;
+        width: 60%; height: 100%;
+        background: linear-gradient(90deg, transparent, #ffffff44, transparent);
+        transition: left 0.4s;
+      }
+
+      #btn-jouer:active::before {
+        left: 150%;
+      }
+
+      #btn-mode {
+        background: transparent;
+        color: #a78bfa;
+        border: 2px solid #a78bfa;
+        padding: 15px 30px;
+        font-size: 1.2rem;
+        border-radius: 10px;
+        letter-spacing: 2px;
+        position: relative;
+        overflow: hidden;
+        transition: box-shadow 0.3s;
+      }
+
+      #btn-mode:active {
+        box-shadow: 0 0 20px #a78bfa, 0 0 40px #a78bfa;
+      }
+
+      #btn-mode::before {
+        content: '';
+        position: absolute;
+        top: 0; left: -100%;
+        width: 60%; height: 100%;
+        background: linear-gradient(90deg, transparent, #ffffff44, transparent);
+        transition: left 0.4s;
+      }
+
+      #btn-mode:active::before {
+        left: 150%;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="fond"></div>
+    <audio src="williamhector-cinematic-action-jungle-drums-loop-125bpm-345139.mp3" loop></audio>
+    <h1 id="titre">LIGTGOOD</h1>
+    <img id="perso" src="removebg-preview.png"/>
+    <div id="boutons">
+      <button id="btn-jouer" onclick="window.location.href='jeu.html'">▶ JOUER</button>
+      <button id="btn-mode">🔄 MODE DE JEU</button>
+    </div>
+    <script>
+      var musique = new Audio('williamhector-cinematic-action-jungle-drums-loop-125bpm-345139.mp3');
+      musique.loop = true;
+
+      document.addEventListener('click', function() {
+        musique.play();
+      }, { once: true });
+
+      setTimeout(function() {
+        document.getElementById('titre').style.display = 'none';
+        document.getElementById('perso').style.display = 'block';
+        document.getElementById('boutons').style.display = 'flex';
+        musique.play();
+      }, 3500);
+    </script>
+  </body>
+</html>
